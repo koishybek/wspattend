@@ -27,6 +27,7 @@ const CFG = {
 };
 
 const BTN_SEL = '.v-button, button, [role="button"], .v-nativebutton, input[type="button"], input[type="submit"]';
+let loginFails = 0; // неудачные входы подряд: после 2 — стоп, чтобы не заблокировали аккаунт
 const LAUNCH_ARGS = [
   '--no-sandbox', '--disable-dev-shm-usage',
   // не давать Chromium душить таймеры/heartbeat в фоне (headless-вкладка = "скрытая")
@@ -145,8 +146,11 @@ async function doLogin(page) {
     const shot = `${CFG.shotDir}/login-failed-${Date.now()}.png`;
     await page.screenshot({ path: shot }).catch(() => {});
     await tg('⚠️ WSP: не смог залогиниться (неверный логин/пароль или капча). См. скрин.', shot);
-    throw new Error('после сабмита всё ещё форма логина — проверь WSP_LOGIN/WSP_PASSWORD');
+    const err = new Error('после сабмита всё ещё форма логина — проверь WSP_LOGIN/WSP_PASSWORD');
+    err.code = 'LOGIN_FAILED';
+    throw err;
   }
+  loginFails = 0;
   log('login: успех');
 }
 async function gotoApp(page) {
@@ -221,6 +225,10 @@ async function sessionLoop(page, ctx) {
   }
 }
 async function dumpButtons(page) {
+  // дать Vaadin дорисовать экран после входа
+  await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
+  await sleep(3000);
+  log('страница:', await page.title().catch(() => '?'), page.url());
   const list = await page.$$eval(
     '.v-button, button, [role="button"], .v-nativebutton, input[type="button"], input[type="submit"]',
     els => els.map(e => {
@@ -234,6 +242,9 @@ async function dumpButtons(page) {
   );
   log('=== КНОПКИ НА СТРАНИЦЕ (подбери TARGET_STEMS по нужной) ===');
   console.log(JSON.stringify(list, null, 2));
+  const hit = list.find(b => b.visible && !b.disabled && CFG.stems.some(s => b.text.toLowerCase().includes(s)));
+  log(hit ? `совпадение с TARGET_STEMS сейчас: «${hit.text}»`
+          : 'совпадений с TARGET_STEMS сейчас нет (кнопка появляется, только когда препод открыл отметку)');
 }
 async function handleConfirm(page) {
   const deadline = Date.now() + 4000;
@@ -292,7 +303,11 @@ async function main() {
         if (p) await p.screenshot({ path: `${CFG.shotDir}/error-${Date.now()}.png` }).catch(() => {});
       } catch {}
       try { await browser?.close(); } catch {}
-      if (CFG.runOnce) return;
+      if (e.code === 'LOGIN_FAILED' && ++loginFails >= 2) {
+        log('‼ 2 неудачных входа подряд — стоп, чтобы не заблокировали аккаунт. Проверь WSP_LOGIN/WSP_PASSWORD.');
+        process.exit(1);
+      }
+      if (CFG.runOnce) process.exit(1);
       log(`перезапуск через ${backoff} мс`);
       await sleep(backoff);
       backoff = Math.min(backoff * 2, 60000);
@@ -303,4 +318,5 @@ async function main() {
 process.on('SIGINT', () => { log('SIGINT — выхожу'); process.exit(0); });
 process.on('SIGTERM', () => { log('SIGTERM — выхожу'); process.exit(0); });
 
-main().catch(e => { console.error('fatal:', e); process.exit(1); });
+// main() завершается только в режимах DUMP/RUN_ONCE — тогда выходим, не дожидаясь таймеров
+main().then(() => process.exit(0), e => { console.error('fatal:', e); process.exit(1); });

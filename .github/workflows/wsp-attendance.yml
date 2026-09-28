@@ -10,8 +10,13 @@ name: WSP авто-отметка
 on:
   workflow_dispatch:            # ручной запуск для теста
     inputs:
+      mode:
+        description: "watch — следить и жать; dump — войти и показать кнопки (без клика)"
+        type: choice
+        options: [watch, dump]
+        default: watch
       minutes:
-        description: "Сколько минут следить в тестовом прогоне"
+        description: "Сколько минут следить (для watch)"
         default: "5"
   schedule:
     - cron: "55 6 * * 1"        # Пн 11:55 Алматы  → INFT3105 12:00–14:00
@@ -50,10 +55,13 @@ jobs:
           # по расписанию — читаем schedule.json; вручную — просто следим N минут
           SCHEDULE_JSON: ${{ github.event_name == 'schedule' && 'schedule.json' || '' }}
           MAX_MINUTES: ${{ github.event_name == 'workflow_dispatch' && inputs.minutes || '0' }}
+          DUMP: ${{ github.event_name == 'workflow_dispatch' && inputs.mode == 'dump' && '1' || '' }}
         run: node bot.mjs
 
+      # на скринах личные данные — в публичном репо артефакты может скачать любой,
+      # поэтому грузим только если репо приватный (в Telegram скрины уходят в любом случае)
       - name: upload screenshots
-        if: always()
+        if: always() && github.event.repository.private
         uses: actions/upload-artifact@v4
         with:
           name: screenshots-${{ github.run_id }}

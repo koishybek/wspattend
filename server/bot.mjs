@@ -8,7 +8,7 @@ const CFG = {
   url:      process.env.WSP_URL || 'https://wsp.kbtu.kz/RegistrationOnline',
   login:    process.env.WSP_LOGIN || '',
   password: process.env.WSP_PASSWORD || '',
-  stems:         splitLower(process.env.TARGET_STEMS, 'отметит,отметь'),
+  stems:         splitLower(process.env.TARGET_STEMS, 'отметит,отметь,белгілен'),
   confirmExact:  splitLower(process.env.CONFIRM_EXACT, 'да,ok,ок,yes,иә'),
   confirmPrefix: splitLower(process.env.CONFIRM_PREFIX, 'подтвер,отправ,сохран,жіберу'),
   loginBtn:      splitLower(process.env.LOGIN_BUTTON_TEXT, 'кіру,войти,вход,login,sign in'),
@@ -135,6 +135,7 @@ async function doLogin(page) {
   await pass.fill(CFG.password);
   const btn = await findLoginBtn(page);
   if (!btn) throw new Error('кнопка входа не найдена');
+  log('login: кнопка входа «' + (((await btn.textContent().catch(() => '')) || '').trim()) + '»'); // видно язык интерфейса
   await btn.click({ timeout: 10000 });
   // ждём исчезновения формы логина
   await page.waitForFunction(() => {
@@ -287,6 +288,8 @@ async function main() {
       const ctxOpts = { ignoreHTTPSErrors: true, locale: 'ru-RU', timezoneId: 'Asia/Almaty' };
       if (fs.existsSync(CFG.stateFile)) ctxOpts.storageState = CFG.stateFile;
       const ctx = await browser.newContext(ctxOpts);
+      // без этой куки портал открывается на казахском и кнопка называется иначе
+      await ctx.addCookies([{ name: 'r5-locale', value: process.env.WSP_LOCALE || 'ru', domain: 'wsp.kbtu.kz', path: '/' }]);
       const page = await ctx.newPage();
       page.setDefaultTimeout(20000);
       await page.goto(CFG.url, { waitUntil: 'domcontentloaded', timeout: 45000 });

@@ -49,7 +49,7 @@ jobs:
           WSP_PASSWORD: ${{ secrets.WSP_PASSWORD }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          TARGET_STEMS: "отметит,отметь"
+          TARGET_STEMS: "отметит,отметь,белгілен"
           CLICK_ONCE: "true"
           EXIT_AFTER_CLICK: "1"
           # по расписанию — читаем schedule.json; вручную — просто следим N минут

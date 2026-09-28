@@ -1,0 +1,8 @@
+# зависимости и секреты — НИКОГДА не коммитить
+**/node_modules/
+**/.env
+.env
+**/storage-state.json
+*.png
+*.log
+data/

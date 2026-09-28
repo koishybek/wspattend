@@ -1,0 +1,23 @@
+# Альтернатива Docker: запуск через systemd (если не хочешь контейнер).
+# 1) поставь node 20+ и `npm install` + `npx playwright install --with-deps chromium` в /opt/wsp-bot/server
+# 2) скопируй этот файл в /etc/systemd/system/wsp-bot.service (поправь путь и User)
+# 3) sudo systemctl daemon-reload && sudo systemctl enable --now wsp-bot
+# логи: journalctl -u wsp-bot -f
+
+[Unit]
+Description=WSP KBTU auto-otmetit bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=wsp
+WorkingDirectory=/opt/wsp-bot/server
+EnvironmentFile=/opt/wsp-bot/server/.env
+ExecStart=/usr/bin/node bot.mjs
+Restart=always
+RestartSec=5
+# перезапуск после ребута обеспечивает enable + Restart=always
+
+[Install]
+WantedBy=multi-user.target

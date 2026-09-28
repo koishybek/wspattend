@@ -1,0 +1,16 @@
+{
+  "name": "wsp-auto-otmetit-server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "24/7 headless bot: логинится в wsp.kbtu.kz и жмёт кнопку «Отметиться», как только она появляется",
+  "scripts": {
+    "probe": "node probe-login.mjs",
+    "start": "node bot.mjs",
+    "once": "RUN_ONCE=1 node bot.mjs"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "playwright": "^1.63.0"
+  }
+}

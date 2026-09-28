@@ -1,0 +1,17 @@
+services:
+  wsp-bot:
+    build: .
+    container_name: wsp-bot
+    restart: unless-stopped          # сам поднимается после ребута сервера и после падений
+    env_file: .env
+    environment:
+      - SCREENSHOT_DIR=/data
+      - STORAGE_STATE=/data/storage-state.json
+    volumes:
+      - ./data:/data                 # скрины и сохранённая сессия остаются на диске
+    # ограничим память, Chromium прожорлив
+    mem_limit: 900m
+    shm_size: 512m
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }

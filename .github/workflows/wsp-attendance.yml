@@ -1,0 +1,62 @@
+name: WSP авто-отметка
+
+# Бесплатный вариант: GitHub включает бота сам к каждой паре по расписанию (server/schedule.json),
+# он логинится, ловит кнопку «Отметиться», жмёт, шлёт в Telegram и выходит. Ноут не нужен.
+#
+# ВРЕМЯ В КРОНАХ — UTC. Алматы = UTC+5, поэтому UTC = время_Алматы − 5 часов.
+# Каждый крон стоит на «начало пары минус 5 минут» (запас на задержку планировщика GitHub),
+# а сколько именно следить — бот считает сам из schedule.json до конца пары.
+
+on:
+  workflow_dispatch:            # ручной запуск для теста
+    inputs:
+      minutes:
+        description: "Сколько минут следить в тестовом прогоне"
+        default: "5"
+  schedule:
+    - cron: "55 6 * * 1"        # Пн 11:55 Алматы  → INFT3105 12:00–14:00
+    - cron: "55 8 * * 1"        # Пн 13:55         → LAN11112 14:00–15:00
+    - cron: "55 10 * * 1"       # Пн 15:55         → INFT3107 16:00–19:00
+    - cron: "55 2 * * 2"        # Вт 07:55         → CSCI1404 08:00–10:00
+    - cron: "55 7 * * 2"        # Вт 12:55         → CSCI1404 13:00–14:00
+    - cron: "55 8 * * 3"        # Ср 13:55         → LAN11112 14:00–15:00
+    - cron: "55 9 * * 3"        # Ср 14:55         → CSCI2208 15:00–18:00
+    - cron: "55 3 * * 5"        # Пт 08:55         → INFT3106 09:00–12:00
+    - cron: "55 8 * * 5"        # Пт 13:55         → LAN11112 14:00–15:00
+    - cron: "55 3 * * 0"        # Вс 08:55         → INFT3105 09:00–10:00
+
+jobs:
+  otmetit:
+    runs-on: ubuntu-latest
+    container: mcr.microsoft.com/playwright:v1.63.0-jammy
+    timeout-minutes: 210        # хватает на самый длинный блок (INFT3107 ~3ч)
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: install deps
+        working-directory: server
+        run: npm ci --no-audit --no-fund
+
+      - name: watch & click
+        working-directory: server
+        env:
+          WSP_LOGIN: ${{ secrets.WSP_LOGIN }}
+          WSP_PASSWORD: ${{ secrets.WSP_PASSWORD }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TARGET_STEMS: "отметит,отметь"
+          CLICK_ONCE: "true"
+          EXIT_AFTER_CLICK: "1"
+          # по расписанию — читаем schedule.json; вручную — просто следим N минут
+          SCHEDULE_JSON: ${{ github.event_name == 'schedule' && 'schedule.json' || '' }}
+          MAX_MINUTES: ${{ github.event_name == 'workflow_dispatch' && inputs.minutes || '0' }}
+        run: node bot.mjs
+
+      - name: upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots-${{ github.run_id }}
+          path: server/*.png
+          if-no-files-found: ignore
+          retention-days: 3

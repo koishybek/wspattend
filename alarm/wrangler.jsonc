@@ -1,0 +1,9 @@
+{
+  "name": "wsp-alarm",
+  "main": "src/index.js",
+  "compatibility_date": "2026-09-01",
+  "triggers": { "crons": ["*/5 * * * *"] },
+  "vars": { "REPO": "koishybek/wspattend" },
+  // GH_TOKEN — секрет: fine-grained токен GitHub только на этот репо, Actions: Read and write
+  "observability": { "enabled": true }
+}

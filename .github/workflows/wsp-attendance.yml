@@ -13,9 +13,9 @@ on:
   workflow_dispatch:            # ручной запуск для теста
     inputs:
       mode:
-        description: "watch — следить и жать; dump — войти и показать кнопки (без клика)"
+        description: "watch — следить N минут; dump — войти и показать кнопки; schedule — по расписанию (так запускает будильник alarm/)"
         type: choice
-        options: [watch, dump]
+        options: [watch, dump, schedule]
         default: watch
       minutes:
         description: "Сколько минут следить (для watch)"
@@ -29,6 +29,12 @@ on:
     - cron: "35 3 * * 5"        # Пт 08:35         → INFT3106             09:00–12:00
     - cron: "35 8 * * 5"        # Пт 13:35         → LAN11112             14:00–15:00
     - cron: "35 3 * * 0"        # Вс 08:35         → INFT3105             09:00–10:00
+
+# будильник Cloudflare + запасной крон GitHub могут запустить бота дважды — второй встанет
+# в очередь, а когда первый закончит блок, увидит «пары нет» и сразу выйдет
+concurrency:
+  group: wsp-bot
+  cancel-in-progress: false
 
 jobs:
   otmetit:
@@ -54,8 +60,8 @@ jobs:
           CLICK_ONCE: "false"
           RELOAD_SEC: "25"          # F5 каждые 25 с, пока кнопки нет
           # по расписанию — читаем schedule.json; вручную — просто следим N минут
-          SCHEDULE_JSON: ${{ github.event_name == 'schedule' && 'schedule.json' || '' }}
-          MAX_MINUTES: ${{ github.event_name == 'workflow_dispatch' && inputs.minutes || '0' }}
+          SCHEDULE_JSON: ${{ (github.event_name == 'schedule' || inputs.mode == 'schedule') && 'schedule.json' || '' }}
+          MAX_MINUTES: ${{ github.event_name == 'workflow_dispatch' && inputs.mode != 'schedule' && inputs.minutes || '0' }}
           DUMP: ${{ github.event_name == 'workflow_dispatch' && inputs.mode == 'dump' && '1' || '' }}
         run: node bot.mjs
 

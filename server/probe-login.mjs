@@ -1,3 +1,4 @@
+
 // Снимок формы логина wsp.kbtu.kz: печатает все поля ввода и кнопки, делает скриншот.
 // Запуск: node probe-login.mjs   (можно PROBE_URL=... HEADFUL=1)
 import { chromium } from 'playwright';

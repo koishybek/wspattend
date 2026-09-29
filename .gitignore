@@ -6,3 +6,6 @@
 *.png
 *.log
 data/
+
+# кэш wrangler (ID аккаунта Cloudflare)
+**/.wrangler/

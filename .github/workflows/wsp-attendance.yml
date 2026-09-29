@@ -52,6 +52,7 @@ jobs:
           TARGET_STEMS: "отметит,отметь,белгілен"
           # жать каждый раз, когда кнопка появляется (отметка может быть на каждой паре блока)
           CLICK_ONCE: "false"
+          RELOAD_SEC: "25"          # F5 каждые 25 с, пока кнопки нет
           # по расписанию — читаем schedule.json; вручную — просто следим N минут
           SCHEDULE_JSON: ${{ github.event_name == 'schedule' && 'schedule.json' || '' }}
           MAX_MINUTES: ${{ github.event_name == 'workflow_dispatch' && inputs.minutes || '0' }}

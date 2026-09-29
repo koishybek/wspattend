@@ -15,6 +15,7 @@ const CFG = {
   clickOnce: (process.env.CLICK_ONCE ?? 'false').toLowerCase() === 'true',
   headful:   truthy(process.env.HEADFUL),
   pollMs:    int(process.env.POLL_MS, 500),
+  reloadSec: int(process.env.RELOAD_SEC, 25),   // F5, если кнопки нет (0 = выкл): вдруг страница сама не обновится
   healthMs:  int(process.env.HEALTH_MS, 15000),
   runOnce:   truthy(process.env.RUN_ONCE),
   tgToken:   process.env.TELEGRAM_BOT_TOKEN || '',
@@ -188,6 +189,8 @@ async function sessionLoop(page, ctx) {
   let lastClick = 0;
   let lastBeat = 0;
   let lastHealth = 0;
+  let lastReload = Date.now();
+  let reloads = 0;
 
   while (true) {
     if (page.isClosed()) throw new Error('page closed');
@@ -218,10 +221,21 @@ async function sessionLoop(page, ctx) {
       } else if (!btn && !armed && Date.now() - lastClick > 3000) {
         armed = true; // кнопка пропала → перевзвожусь для следующего появления
       }
+      // кнопки нет → периодически F5, на случай если страница сама не подтягивает отметку
+      if (!btn && CFG.reloadSec > 0 && Date.now() - lastReload > CFG.reloadSec * 1000) {
+        const t = Date.now();
+        await page.reload({ waitUntil: 'domcontentloaded', timeout: 45000 }).catch(e => log('ошибка обновления:', e.message));
+        await page.waitForFunction(() => document.querySelector('.v-app') && !document.querySelector('.v-app-loading'),
+          null, { timeout: 30000 }).catch(() => {});
+        lastReload = Date.now();
+        reloads++;
+        const sec = Math.round((lastReload - t) / 100) / 10;
+        if (reloads <= 3 || sec > 10) log(`F5 #${reloads}: ${sec}с`);
+      }
     }
 
     if (CFG.runOnce) { log('RUN_ONCE: один проход завершён'); return; }
-    if (Date.now() - lastBeat > 60000) { lastBeat = Date.now(); log('alive · url=', page.url()); }
+    if (Date.now() - lastBeat > 60000) { lastBeat = Date.now(); log(`alive · F5 сделано: ${reloads} · url=`, page.url()); }
     await sleep(CFG.pollMs);
   }
 }

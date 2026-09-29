@@ -26,15 +26,22 @@ export function isDue(date) {
   });
 }
 
-async function dispatch(env) {
-  const res = await fetch(`https://api.github.com/repos/${env.REPO}/actions/workflows/wsp-attendance.yml/dispatches`, {
-    method: 'POST',
+function gh(env, path, init = {}) {
+  return fetch(`https://api.github.com/repos/${env.REPO}${path}`, {
+    ...init,
     headers: {
-      Authorization: `Bearer ${env.GH_TOKEN}`,
+      // trim: секрет, залитый из PowerShell, приходит с \r\n на конце — такой заголовок невалиден
+      Authorization: `Bearer ${String(env.GH_TOKEN || '').trim()}`,
       Accept: 'application/vnd.github+json',
       'User-Agent': 'wsp-alarm',
       'X-GitHub-Api-Version': '2022-11-28',
     },
+  });
+}
+
+async function dispatch(env) {
+  const res = await gh(env, '/actions/workflows/wsp-attendance.yml/dispatches', {
+    method: 'POST',
     body: JSON.stringify({ ref: 'main', inputs: { mode: 'schedule' } }),
   });
   if (res.status !== 204) throw new Error(`dispatch ${res.status}: ${await res.text()}`);
@@ -43,14 +50,21 @@ async function dispatch(env) {
 
 export default {
   async scheduled(event, env, ctx) {
-    if (!isDue(new Date(event.scheduledTime))) return;
+    const due = isDue(new Date(event.scheduledTime));
+    console.log('tick', new Date(event.scheduledTime).toISOString(), due ? '→ запускаю бота' : '');
+    if (!due) return;
     ctx.waitUntil(dispatch(env).catch(async (e) => {
       console.error('первая попытка:', e.message);
       await new Promise((r) => setTimeout(r, 20000));
       await dispatch(env);
     }));
   },
-  async fetch() {
+  async fetch(req, env) {
+    // /check — жив ли токен (только статус, сам токен не светится; ничего не запускает)
+    if (new URL(req.url).pathname === '/check') {
+      const res = await gh(env, '/actions/workflows/wsp-attendance.yml');
+      return new Response(`github: ${res.status} ${res.status === 200 ? 'ok' : 'FAIL'}`);
+    }
     return new Response('wsp-alarm ok');
   },
 };

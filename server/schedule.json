@@ -1,11 +1,9 @@
 [
-  { "dow": 1, "start": "12:00", "end": "14:00", "name": "INFT3105 Кибербезопасность" },
-  { "dow": 1, "start": "14:00", "end": "15:00", "name": "LAN11112 Soft skills" },
+  { "dow": 1, "start": "12:00", "end": "15:00", "name": "INFT3105 Кибербезопасность + LAN11112 Soft skills" },
   { "dow": 1, "start": "16:00", "end": "19:00", "name": "INFT3107 Осн. инф. систем" },
   { "dow": 2, "start": "08:00", "end": "10:00", "name": "CSCI1404 Unreal" },
   { "dow": 2, "start": "13:00", "end": "14:00", "name": "CSCI1404 Unreal практика" },
-  { "dow": 3, "start": "14:00", "end": "15:00", "name": "LAN11112 Soft skills" },
-  { "dow": 3, "start": "15:00", "end": "18:00", "name": "CSCI2208 Инстр. средства" },
+  { "dow": 3, "start": "14:00", "end": "18:00", "name": "LAN11112 Soft skills + CSCI2208 Инстр. средства" },
   { "dow": 5, "start": "09:00", "end": "12:00", "name": "INFT3106 Осн. бизнеса" },
   { "dow": 5, "start": "14:00", "end": "15:00", "name": "LAN11112 Soft skills" },
   { "dow": 0, "start": "09:00", "end": "10:00", "name": "INFT3105 Кибербезопасность" }

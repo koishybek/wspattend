@@ -55,7 +55,7 @@ function activeBlock(path) {
   const p = Object.fromEntries(f.formatToParts(new Date()).map(x => [x.type, x.value]));
   const dow = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 }[p.weekday];
   const now = (parseInt(p.hour, 10) % 24) * 60 + parseInt(p.minute, 10);
-  const GRACE = 6, ENDBUF = 3;                 // запас на задержку крона GitHub
+  const GRACE = 30, ENDBUF = 3;                // крон стартует за 25 мин до пары (запас на задержку GitHub)
   const toMin = s => { const [h, m] = s.split(':').map(Number); return h * 60 + m; };
   let best = null;
   for (const b of blocks) {

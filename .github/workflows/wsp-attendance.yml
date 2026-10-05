@@ -32,8 +32,9 @@ on:
 
 # будильник Cloudflare + запасной крон GitHub могут запустить бота дважды — второй встанет
 # в очередь, а когда первый закончит блок, увидит «пары нет» и сразу выйдет
+# один живой бот за раз; но tgtest (в WSP не заходит) пускаем сразу, не в очередь
 concurrency:
-  group: wsp-bot
+  group: ${{ (github.event_name == 'workflow_dispatch' && inputs.mode == 'tgtest') && format('wsp-tgtest-{0}', github.run_id) || 'wsp-bot' }}
   cancel-in-progress: false
 
 jobs:

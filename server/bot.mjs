@@ -282,6 +282,18 @@ async function main() {
   validate();
   log('старт. url=', CFG.url, '| headful=', CFG.headful);
 
+  // проверка связи с Telegram (ничего не логинит, просто шлёт тестовое сообщение)
+  if (truthy(process.env.TG_TEST)) {
+    if (!CFG.tgToken || !CFG.tgChat) { log('TG_TEST: нет TELEGRAM_BOT_TOKEN или TELEGRAM_CHAT_ID в секретах'); process.exit(1); }
+    const r = await fetch(`https://api.telegram.org/bot${CFG.tgToken}/sendMessage`, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ chat_id: CFG.tgChat, text: '🔔 WSP-бот: проверка связи. Всё подключено ✅' }),
+    }).catch(e => ({ status: 0, json: async () => ({ description: e.message }) }));
+    const j = await r.json().catch(() => ({}));
+    log('TG_TEST:', r.status, j.ok ? 'отправлено ✅' : ('ошибка — ' + (j.description || 'см. статус')));
+    process.exit(j.ok ? 0 : 1);
+  }
+
   // режим расписания: если сейчас пары нет — сразу выходим (экономим минуты GitHub)
   if (CFG.scheduleJson) {
     const b = activeBlock(CFG.scheduleJson);

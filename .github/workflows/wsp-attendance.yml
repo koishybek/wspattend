@@ -15,7 +15,7 @@ on:
       mode:
         description: "watch — следить N минут; dump — войти и показать кнопки; schedule — по расписанию (так запускает будильник alarm/)"
         type: choice
-        options: [watch, dump, schedule]
+        options: [watch, dump, schedule, tgtest]
         default: watch
       minutes:
         description: "Сколько минут следить (для watch)"
@@ -63,6 +63,7 @@ jobs:
           SCHEDULE_JSON: ${{ (github.event_name == 'schedule' || inputs.mode == 'schedule') && 'schedule.json' || '' }}
           MAX_MINUTES: ${{ github.event_name == 'workflow_dispatch' && inputs.mode != 'schedule' && inputs.minutes || '0' }}
           DUMP: ${{ github.event_name == 'workflow_dispatch' && inputs.mode == 'dump' && '1' || '' }}
+          TG_TEST: ${{ github.event_name == 'workflow_dispatch' && inputs.mode == 'tgtest' && '1' || '' }}
         run: node bot.mjs
 
       # на скринах личные данные — в публичном репо артефакты может скачать любой,

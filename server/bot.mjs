@@ -184,7 +184,6 @@ async function onTargetClicked(page, label) {
 // ---------- основной цикл сессии ----------
 async function sessionLoop(page, ctx) {
   log('слежу за кнопкой:', CFG.stems, '| clickOnce =', CFG.clickOnce);
-  let armed = true;         // можно ли сейчас кликать
   let doneForever = false;  // clickOnce отработал
   let lastClick = 0;
   let lastBeat = 0;
@@ -207,22 +206,28 @@ async function sessionLoop(page, ctx) {
     }
 
     if (!doneForever) {
-      const btn = await findTarget(page);
-      if (btn && armed) {
+      // препод может открыть 2-3 отметки разом — жмём ВСЕ активные кнопки за проход.
+      // после клика нажатая кнопка исчезает/дизейблится, поэтому findTarget каждый раз
+      // отдаёт следующую; стем 'отметит' не ловит «Отметка/Отмечено», так что повторно не жмём.
+      let clicked = 0;
+      while (clicked < 8) {
+        const btn = await findTarget(page);
+        if (!btn) break;
         const label = ((await btn.textContent().catch(() => '')) || '').trim() || '(без текста)';
-        log('цель активна → жму:', label);
+        log(`цель активна → жму (${clicked + 1}):`, label);
         await btn.click({ timeout: 5000 }).catch(e => log('ошибка клика:', e.message));
         await handleConfirm(page);
         await onTargetClicked(page, label);
-        if (CFG.exitAfterClick) { log('EXIT_AFTER_CLICK: клик сделан — выход'); await sleep(500); process.exit(0); }
-        lastClick = Date.now();
-        armed = false;
-        if (CFG.clickOnce) { doneForever = true; log('clickOnce: готово, дальше просто держу сессию'); }
-      } else if (!btn && !armed && Date.now() - lastClick > 3000) {
-        armed = true; // кнопка пропала → перевзвожусь для следующего появления
+        clicked++;
+        await sleep(900); // дать порталу убрать/задизейблить нажатую кнопку
       }
-      // кнопки нет → периодически F5, на случай если страница сама не подтягивает отметку
-      if (!btn && CFG.reloadSec > 0 && Date.now() - lastReload > CFG.reloadSec * 1000) {
+      if (clicked > 0) {
+        lastClick = Date.now();
+        if (CFG.exitAfterClick) { log('EXIT_AFTER_CLICK: клик(и) сделаны — выход'); await sleep(500); process.exit(0); }
+        if (CFG.clickOnce) { doneForever = true; log('clickOnce: готово, дальше просто держу сессию'); }
+      }
+      // кнопок нет → периодически F5, на случай если страница сама не подтягивает отметку
+      if (clicked === 0 && CFG.reloadSec > 0 && Date.now() - lastReload > CFG.reloadSec * 1000) {
         const t = Date.now();
         await page.reload({ waitUntil: 'domcontentloaded', timeout: 45000 }).catch(e => log('ошибка обновления:', e.message));
         await page.waitForFunction(() => document.querySelector('.v-app') && !document.querySelector('.v-app-loading'),
@@ -260,6 +265,14 @@ async function dumpButtons(page) {
   const hit = list.find(b => b.visible && !b.disabled && CFG.stems.some(s => b.text.toLowerCase().includes(s)));
   log(hit ? `совпадение с TARGET_STEMS сейчас: «${hit.text}»`
           : 'совпадений с TARGET_STEMS сейчас нет (кнопка появляется, только когда препод открыл отметку)');
+
+  // модальные окна / анкетирование: заголовки окон и видимый текст — чтобы разобрать, что блокирует страницу
+  const windows = await page.$$eval('.v-window', els => els.map(w => {
+    const cap = w.querySelector('.v-window-header, .v-window-caption');
+    return { title: (cap ? cap.textContent : '').trim(), text: (w.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 400) };
+  })).catch(() => []);
+  if (windows.length) { log('=== ОТКРЫТЫЕ ОКНА / АНКЕТА ==='); console.log(JSON.stringify(windows, null, 2)); }
+  else log('открытых модальных окон нет');
 }
 async function handleConfirm(page) {
   const deadline = Date.now() + 4000;
